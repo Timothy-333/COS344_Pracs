@@ -11,10 +11,12 @@
 #include <glm/glm.hpp>
 
 #include "shader.hpp"
+#include "shapes.h"
 
 using namespace glm;
 using namespace std;
 
+bool wireframe = false;
 const char *getError()
 {
     const char *errorDescription;
@@ -40,7 +42,6 @@ inline void startUpGLEW()
         throw getError();
     }
 }
-
 inline GLFWwindow *setUp()
 {
     startUpGLFW();
@@ -61,13 +62,108 @@ inline GLFWwindow *setUp()
     startUpGLEW();
     return window;
 }
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    glViewport(0, 0, width, height);
+}
+void drawShape(Shape* shape, GLuint vertexbuffer, GLuint colorbuffer, GLuint programID)
+{
+    if (Car* car = dynamic_cast<Car*>(shape)) 
+    {
+        float rotateAmount = 0.05f; // Adjust as needed
+        mat3x3 rotationMatrix = mat3x3(1.0f);
+        rotationMatrix[0][0] = cos(rotateAmount);
+        rotationMatrix[0][1] = -sin(rotateAmount);
+        rotationMatrix[1][0] = sin(rotateAmount);
+        rotationMatrix[1][1] = cos(rotateAmount);
 
+        for (int i = 0; i < 4; i++) {
+            // Translate to origin
+            mat3x3 translateToOrigin = mat3x3(1.0f);
+            translateToOrigin[2][0] = -car->wheels[i]->center.x;
+            translateToOrigin[2][1] = -car->wheels[i]->center.y;
+
+            // Translate back
+            mat3x3 translateBack = mat3x3(1.0f);
+            translateBack[2][0] = car->wheels[i]->center.x;
+            translateBack[2][1] = car->wheels[i]->center.y;
+
+            // Apply the transformations
+            car->wheels[i]->applyMatrix(translateToOrigin);
+            car->wheels[i]->applyMatrix(rotationMatrix);
+            car->wheels[i]->applyMatrix(translateBack);
+        }
+    }
+    GLfloat* vertices = shape->toVertexArray();
+    GLfloat* colors = shape->toColorArray();
+
+    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat[shape->numVertices()]), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat[shape->numColors()]), colors, GL_STATIC_DRAW);
+
+
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void *)0);
+
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+
+    if (wireframe)
+    {
+        glDrawArrays(GL_LINES, 0, shape->numVertices());
+    }
+    else
+    {
+        glDrawArrays(GL_TRIANGLES, 0, shape->numVertices());
+    }
+
+
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+}
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    float moveAmount = 0.05f;
+    float scaleAmountUp = 0.98f;
+    float scaleAmountDown = 1.02f;
+    Car* car = static_cast<Car*>(glfwGetWindowUserPointer(window));
+
+    if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+        mat3x3 transformationMatrix = mat3x3(1.0f);
+        switch (key) {
+            case GLFW_KEY_A: // Move up
+                transformationMatrix[2][1] = moveAmount;
+                transformationMatrix[0][0] = transformationMatrix[1][1] = scaleAmountUp;
+                break;
+            case GLFW_KEY_S: // Move left
+                transformationMatrix[2][0] = -moveAmount;
+                break;
+            case GLFW_KEY_D: // Move down
+                transformationMatrix[2][1] = -moveAmount;
+                transformationMatrix[0][0] = transformationMatrix[1][1] = scaleAmountDown;
+                break;
+            case GLFW_KEY_W: // Move right
+                transformationMatrix[2][0] = moveAmount;
+                break;
+            case GLFW_KEY_ENTER: // Toggle wireframe
+                wireframe = !wireframe;
+            default:
+                return;
+        }
+        car->applyMatrix(transformationMatrix);
+    }
+}
 int main()
 {
     GLFWwindow *window;
     try
     {
         window = setUp();
+        glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     }
     catch (const char *e)
     {
@@ -75,5 +171,41 @@ int main()
         throw;
     }
 
-    //Add code here
+    glClearColor(0.0f, 0.0f, 0.6f, 0.0f); // Set the background color to blue
+
+    GLuint VertexArrayID;
+    glGenVertexArrays(1, &VertexArrayID);
+    glBindVertexArray(VertexArrayID);
+
+    GLuint programID = LoadShaders("vertexShader.glsl", "fragmentShader.glsl");
+    GLuint vertexbuffer;
+    glGenBuffers(1, &vertexbuffer);
+    GLuint colorbuffer; 
+    glGenBuffers(1, &colorbuffer);
+
+    Shape* car = new Car();
+    Shape* road = new Road();
+
+    glfwSetWindowUserPointer(window, car);
+    glfwSetKeyCallback(window, key_callback);
+    
+    while (!glfwWindowShouldClose(window))
+    {
+        glClear(GL_COLOR_BUFFER_BIT);
+        glUseProgram(programID);
+
+        // Draw the car
+        drawShape(road, vertexbuffer, colorbuffer, programID);
+        drawShape(car, vertexbuffer, colorbuffer, programID);
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+    
+    glDisableVertexAttribArray(0);
+    glDeleteBuffers(1, &vertexbuffer);
+    glDeleteVertexArrays(1, &VertexArrayID);
+    glDeleteProgram(programID);
+    glfwTerminate();
+    return 0;
 }
