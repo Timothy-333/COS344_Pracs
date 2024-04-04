@@ -50,7 +50,37 @@ GLfloat *Shape::toVertexArray()
 
     return result;
 }
+// GLfloat *Shape::toVertexArrayWireframe()
+// {
+//     GLfloat *result = new GLfloat[numVertices() + 2 * numShapes];
+//     if (numShapes > 0)
+//     {
+//         int count = 0;
+//         for (int i = 0; i < numShapes; i++)
+//         {
+//             GLfloat *temp = shapes[i]->toVertexArrayWireframe();
+//             for (int j = 0; j < shapes[i]->numVertices()+ 2 * numShapes; j++)
+//             {
+//                 result[count++] = temp[j];
+//             }
+//             delete[] temp;
+//         }
+//     }
+//     else
+//     {
+//         int count = 0;
+//         for (int i = 0; i < numVertices() / 2; i++)
+//         {
+//             result[count++] = (*vertices[i])[0];
+//             result[count++] = (*vertices[i])[1];
+//         }
+//         // Add the first vertex at the end to close the loop
+//         result[count++] = (*vertices[0])[0];
+//         result[count++] = (*vertices[0])[1];
+//     }
 
+//     return result;
+// }
 GLfloat *Shape::toColorArray()
 {
     GLfloat *result = new GLfloat[numColors()];
@@ -186,6 +216,7 @@ Circle::Circle(vec2 center, GLfloat radius, vec3 color, int numSegments)
     shapes = new Shape*[numShapes];
     vertices = new vec2*[numSegments];
     colors = new vec3[numSegments];
+    this->radius = radius;
     this->center = center;
     for (int i = 0; i < numSegments; i++)
     {
@@ -201,7 +232,7 @@ Circle::Circle(vec2 center, GLfloat radius, vec3 color, int numSegments)
 }
 Car::Car()
 {
-    numShapes = 10;
+    numShapes = 13;
     shapes = new Shape *[numShapes];
 
     // Body of the car
@@ -277,13 +308,29 @@ Car::Car()
         vec3(1, 1, 1), // White color
         10); // Number of segments
         
-    //front light
+    //back light
     shapes[10] = new Rectangle(
         vec2(-0.8, -0.2),
         vec2(-0.7, -0.2),
         vec2(-0.8, -0.3),
         vec2(-0.7, -0.3),
-        vec3(1, 1, 0)); // Yellow color
+        vec3(0.4, 0, 0)); // red color
+
+    // front light
+    shapes[11] = new Rectangle(
+        vec2(0.7, -0.2), // Top left
+        vec2(0.8, -0.2), // Top right
+        vec2(0.7, -0.3), // Bottom left
+        vec2(0.8, -0.3), // Bottom right
+        vec3(1, 1, 0)); // yellow color
+
+    shapes[12] = new Rectangle(
+        vec2(0.0, -0.25), // Top left
+        vec2(0.15, -0.25), // Top right
+        vec2(0.0, -0.3), // Bottom left
+        vec2(0.15, -0.3), // Bottom right
+        vec3(0, 0, 0)); // Black color
+        
     
     wheels[0] = static_cast<Circle *>(shapes[1]);
     wheels[1] = static_cast<Circle *>(shapes[2]);
@@ -299,6 +346,21 @@ void Car::applyMatrix(mat3x3 matrix)
         vec3 newCenter = matrix * vec3(wheels[i]->center, 1);
         wheels[i]->center = vec2(newCenter.x, newCenter.y);
     }
+}
+bool Car::isWithinBounds()
+{
+    for (int i = 0; i < 4; i++)
+    {
+        if (wheels[i]->center.x - wheels[i]->radius < -1.0 || wheels[i]->center.x + wheels[i]->radius > 1.0)
+        {
+            return false;
+        }
+        if (wheels[i]->center.y - wheels[i]->radius < -1.0 || wheels[i]->center.y + wheels[i]->radius > 1.0)
+        {
+            return false;
+        }
+    }
+    return true;
 }
 Road::Road()
 {
@@ -324,4 +386,48 @@ Road::Road()
             vec2(x + 0.1, -0.15), // Bottom right
             vec3(1, 1, 1)); // White color
     }
+}
+House::House(GLfloat houseX, GLfloat houseY, GLfloat houseScale)
+{
+    numShapes = 5;
+    shapes = new Shape *[numShapes];
+
+    // House
+    shapes[0] = new Rectangle(
+        vec2((-0.5 + houseX) * houseScale, (0.5 + houseY) * houseScale), // Top left
+        vec2((0.5 + houseX) * houseScale, (0.5 + houseY) * houseScale), // Top right
+        vec2((-0.5 + houseX) * houseScale, (-0.5 + houseY) * houseScale), // Bottom left
+        vec2((0.5 + houseX) * houseScale, (-0.5 + houseY) * houseScale), // Bottom right
+        vec3(0.5, 0.5, 0.5)); // Grey color
+    
+    // Roof
+    shapes[1] = new Triangle(
+        vec2((-0.5 + houseX) * houseScale, (0.5 + houseY) * houseScale), // Top left
+        vec2((0.5 + houseX) * houseScale, (0.5 + houseY) * houseScale), // Top right
+        vec2(houseX * houseScale, (1.5 + houseY) * houseScale), // Top
+        vec3(0.5, 0, 0)); // Red color
+    
+    // Door
+    shapes[2] = new Rectangle(
+        vec2((-0.1 + houseX) * houseScale, (-0.5 + houseY) * houseScale), // Top left
+        vec2((0.1 + houseX) * houseScale, (-0.5 + houseY) * houseScale), // Top right
+        vec2((-0.1 + houseX) * houseScale, (-0.3 + houseY) * houseScale), // Bottom left
+        vec2((0.1 + houseX) * houseScale, (-0.3 + houseY) * houseScale), // Bottom right
+        vec3(0, 0, 0)); // Black color
+    
+    // Window 1
+    shapes[3] = new Rectangle(
+        vec2((-0.4 + houseX) * houseScale, (0.2 + houseY) * houseScale), // Top left
+        vec2((-0.3 + houseX) * houseScale, (0.2 + houseY) * houseScale), // Top right
+        vec2((-0.4 + houseX) * houseScale, (0.3 + houseY) * houseScale), // Bottom left
+        vec2((-0.3 + houseX) * houseScale, (0.3 + houseY) * houseScale), // Bottom right
+        vec3(0, 0, 0)); // Black color
+    
+    // Window 2
+    shapes[4] = new Rectangle(
+        vec2((0.3 + houseX) * houseScale, (0.2 + houseY) * houseScale), // Top left
+        vec2((0.4 + houseX) * houseScale, (0.2 + houseY) * houseScale), // Top right
+        vec2((0.3 + houseX) * houseScale, (0.3 + houseY) * houseScale), // Bottom left
+        vec2((0.4 + houseX) * houseScale, (0.3 + houseY) * houseScale), // Bottom right
+        vec3(0, 0, 0)); // Black color
 }

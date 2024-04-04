@@ -22,6 +22,7 @@ struct Shape
 
         virtual void applyMatrix(mat3x3);
         virtual GLfloat* toVertexArray();
+        // virtual GLfloat* toVertexArrayWireframe();
         virtual GLfloat* toColorArray();
         int accumulateShapes(int (Shape::*func)());
         virtual int numPoints();
@@ -47,6 +48,7 @@ struct Circle: public Shape
 {
     public:
         vec2 center;
+        GLfloat radius;
         Circle(vec2, GLfloat, vec3, int);
 };
 struct Car: public Shape
@@ -54,12 +56,18 @@ struct Car: public Shape
     public:
         Circle* wheels[4];
         void applyMatrix(mat3x3);
+        bool isWithinBounds();
         Car();
 };
 struct Road: public Shape
 {
     public:
         Road();
+};
+struct House: public Shape
+{
+    public:
+        House(GLfloat, GLfloat, GLfloat);
 };
 
 #endif

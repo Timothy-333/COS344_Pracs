@@ -94,11 +94,22 @@ void drawShape(Shape* shape, GLuint vertexbuffer, GLuint colorbuffer, GLuint pro
             car->wheels[i]->applyMatrix(translateBack);
         }
     }
-    GLfloat* vertices = shape->toVertexArray();
+    GLfloat* vertices;
+    int numVertices = shape->numVertices();
+    // if (wireframe)
+    // {
+    //     vertices = shape->toVertexArrayWireframe();
+    //     numVertices += shape->numShapes * 2;
+    // }
+    // else
+    // {
+        vertices = shape->toVertexArray();
+    // }
+    
     GLfloat* colors = shape->toColorArray();
 
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat[shape->numVertices()]), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat[numVertices]), vertices, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat[shape->numColors()]), colors, GL_STATIC_DRAW);
@@ -114,11 +125,11 @@ void drawShape(Shape* shape, GLuint vertexbuffer, GLuint colorbuffer, GLuint pro
 
     if (wireframe)
     {
-        glDrawArrays(GL_LINES, 0, shape->numVertices());
+        glDrawArrays(GL_LINES, 0, numVertices);
     }
     else
     {
-        glDrawArrays(GL_TRIANGLES, 0, shape->numVertices());
+        glDrawArrays(GL_TRIANGLES, 0, numVertices);
     }
 
 
@@ -155,6 +166,23 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 return;
         }
         car->applyMatrix(transformationMatrix);
+
+        // Check if the car is within bounds
+        if (!car->isWithinBounds())
+        {
+            // If the car is out of bounds, undo the transformation
+            transformationMatrix[2][0] = -transformationMatrix[2][0];
+            transformationMatrix[2][1] = -transformationMatrix[2][1];
+
+            // Undo the scaling
+            if (key == GLFW_KEY_A) {
+                transformationMatrix[0][0] = transformationMatrix[1][1] = 1 / scaleAmountUp;
+            } else if (key == GLFW_KEY_D) {
+                transformationMatrix[0][0] = transformationMatrix[1][1] = 1 / scaleAmountDown;
+            }
+
+            car->applyMatrix(transformationMatrix);
+        }
     }
 }
 int main()
@@ -171,7 +199,7 @@ int main()
         throw;
     }
 
-    glClearColor(0.0f, 0.0f, 0.6f, 0.0f); // Set the background color to blue
+    glClearColor(0.0f, 0.6f, 0.0f, 0.0f); // Set the background color to green
 
     GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
@@ -185,6 +213,10 @@ int main()
 
     Shape* car = new Car();
     Shape* road = new Road();
+    House* house = new House(0.0f, 2.1f, 0.3f);
+    House* house2 = new House(-2.0f, 2.1f, 0.3f);
+    House* house3 = new House(2.0f, 2.1f, 0.3f);
+    
 
     glfwSetWindowUserPointer(window, car);
     glfwSetKeyCallback(window, key_callback);
@@ -196,6 +228,9 @@ int main()
 
         // Draw the car
         drawShape(road, vertexbuffer, colorbuffer, programID);
+        drawShape(house, vertexbuffer, colorbuffer, programID);
+        drawShape(house2, vertexbuffer, colorbuffer, programID);
+        drawShape(house3, vertexbuffer, colorbuffer, programID);
         drawShape(car, vertexbuffer, colorbuffer, programID);
 
         glfwSwapBuffers(window);
