@@ -20,7 +20,7 @@ struct Shape
         Shape** shapes;
         int numShapes;
         double **transformationMatrix = new double*[4];
-        SquareMatrix* rotationalMatrix;
+        // SquareMatrix* rotationalMatrix;
 
         virtual ~Shape();
         Shape();
