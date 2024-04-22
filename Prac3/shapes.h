@@ -20,11 +20,11 @@ struct Shape
         Shape** shapes;
         int numShapes;
         double **transformationMatrix = new double*[4];
+        SquareMatrix* rotationalMatrix;
 
         virtual ~Shape();
-
+        Shape();
         virtual void applyMatrix(Matrix*);
-        void setCenter(vec3);
         virtual GLfloat* toVertexArray();
         virtual GLfloat* toColorArray();
         int accumulateShapes(int (Shape::*func)());
@@ -92,7 +92,6 @@ struct Wheel: public Shape
 struct EngineNose: public Shape
 {
     public:
-        vec3 center;
         EngineNose(vec3, double, double, vec3 = vec3(1, 0, 0));
 };
 struct Engine: public Shape

@@ -3,7 +3,26 @@
 Shape::~Shape()
 {
 }
-
+Shape::Shape()
+{
+    // numShapes = 0;
+    // shapes = new Shape *[0];
+    // vertices = new vec3 *[0];
+    // colors = new vec3[0];
+    // double **rotationalMat = new double *[4];
+    // for (int i = 0; i < 4; i++)
+    // {
+    //     if (rotationalMat[i] == NULL)
+    //     {
+    //         rotationalMat[i] = new double[4];
+    //     }
+    //     for (int j = 0; j < 4; j++)
+    //     {
+    //         rotationalMat[i][j] = (i == j) ? 1 : 0;
+    //     }
+    // }
+    // SquareMatrix *rotationalMatrix = new SquareMatrix(4, rotationalMat);
+}
 void Shape::applyMatrix(Matrix *m) 
 {
     if (numShapes > 0)
@@ -11,6 +30,23 @@ void Shape::applyMatrix(Matrix *m)
         for (int i = 0; i < numShapes; i++)
         {
             shapes[i]->applyMatrix(m);
+
+            // Convert the center to homogeneous coordinates
+            Matrix homogenousCenter = Matrix(4, 1);
+            for (int j = 0; j < 3; j++)
+            {
+                homogenousCenter[j][0] = shapes[i]->center[j];
+            }
+            homogenousCenter[3][0] = 1.0;
+
+            // Perform the matrix multiplication
+            Matrix transformedCenter = (*m) * homogenousCenter;
+
+            // Convert back to 3D coordinates and update the center
+            for (int j = 0; j < 3; j++)
+            {
+                shapes[i]->center[j] = transformedCenter[j][0] / transformedCenter[3][0];
+            }
         }
     }
     else
@@ -69,13 +105,14 @@ void Shape::rotate(double amount, int direction)
     {
         return;
     }
-
     // Translate the shape to the origin
     resetMatrix();
     transformationMatrix[0][3] = -center.x;
     transformationMatrix[1][3] = -center.y;
     transformationMatrix[2][3] = -center.z;
-    Matrix* matrix = new Matrix(4, 4, transformationMatrix);
+    Matrix* matrix = new Matrix(4,4, transformationMatrix);
+
+    // SquareMatrix* inverseRotationalMatrix = &rotationalMatrix->operator!();
     applyMatrix(matrix);
 
     // Rotate the shape
@@ -103,7 +140,9 @@ void Shape::rotate(double amount, int direction)
     default:
         return;
     }
-    matrix = new Matrix(4, 4, transformationMatrix);
+    
+    // matrix = new SquareMatrix(4, transformationMatrix);
+    // Matrix* rotationalMatrix = &((*rotationalMatrix) * (*matrix));
     applyMatrix(matrix);
 
     // Translate the shape back to its original position
@@ -111,7 +150,7 @@ void Shape::rotate(double amount, int direction)
     transformationMatrix[0][3] = center.x;
     transformationMatrix[1][3] = center.y;
     transformationMatrix[2][3] = center.z;
-    matrix = new Matrix(4, 4, transformationMatrix);
+    matrix = new Matrix(4,4, transformationMatrix);
     applyMatrix(matrix);
 }
 void Shape::translate(vec3 amount)
@@ -395,10 +434,10 @@ Tail::Tail(vec3 start, vec3 color)
     RectangularPrism* rightWing = new RectangularPrism(start + vec3(0.03, 0.25, -0.08), wingHeight, wingWidth, wingLength, color);
     RectangularPrism* topWing = new RectangularPrism(start + vec3(0.09, 0.25, 0), wingHeight, wingLength, wingWidth, color);
     
-    RectangularPrism* rudder = new RectangularPrism(start + vec3(0.085, 0.21, 0), wingHeight - 0.15, wingLength - 0.02, wingWidth - 0.02, vec3(0, 0.5, 1));
+    RectangularPrism* rudder = new RectangularPrism(start + vec3(0.085, 0.21, 0), wingHeight - 0.15, wingLength - 0.02, wingWidth - 0.02, vec3(1, 0, 0));
     
-    RectangularPrism* leftFin = new RectangularPrism(start + vec3(0.03, 0.21, 0.08), wingHeight - 0.15, wingWidth - 0.02, wingLength - 0.02, vec3(0, 0.5, 1));
-    RectangularPrism* rightFin = new RectangularPrism(start + vec3(0.03, 0.21, -0.08), wingHeight - 0.15, wingWidth - 0.02, wingLength - 0.02, vec3(0, 0.5, 1));
+    RectangularPrism* leftFin = new RectangularPrism(start + vec3(0.03, 0.21, 0.08), wingHeight - 0.15, wingWidth - 0.02, wingLength - 0.02, vec3(1, 0, 0));
+    RectangularPrism* rightFin = new RectangularPrism(start + vec3(0.03, 0.21, -0.08), wingHeight - 0.15, wingWidth - 0.02, wingLength - 0.02, vec3(1, 0, 0));
 
     numShapes = 7;
     shapes = new Shape*[numShapes] { base, leftWing, rightWing, topWing, rudder, leftFin, rightFin };
@@ -495,7 +534,6 @@ Plane::Plane(vec3 center, vec3 color)
     engines[1] = engine2;
     engines[2] = engine3;
     engines[3] = engine4;
-
     Cylinder* cockpit = new Cylinder(center + vec3(0.03, 0.53, 0), 0.14, 0.12, color, numVertices);
     RectangularPrism* window1 = new RectangularPrism(center + vec3(0.035, 0.195, 0.01), 0.05, 0.05, 0.05, vec3(0.2, 0.2, 1));
     RectangularPrism* window2 = new RectangularPrism(center + vec3(0.035, 0.195, -0.01), 0.05, 0.05, 0.05, vec3(0.2, 0.2, 1));
