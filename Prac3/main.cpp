@@ -18,9 +18,8 @@ using namespace glm;
 using namespace std;
 
 bool wireframe = false;
-Shape *plane = new Cylinder(vec3(0, 0, 0), 0.5, 1, vec3(1, 0, 0));
-// Shape *plane = new RectangularPrism(vec3(0, 0, 0), 1, 1, 1, vec3(1, 0, 0));
-double **transformationMatrix;
+vec3 center = vec3(0, 0, 0);
+Shape *plane = new Plane(center, vec3(0.2, 0.3, 0.1));
 const char *getError()
 {
     const char *errorDescription;
@@ -67,76 +66,61 @@ inline GLFWwindow *setUp()
     startUpGLEW();
     return window;
 }
-void resetMatrix(double** matrix)
-{
-    if (matrix == NULL)
-    {
-        return;
-    }
-    for (int i = 0; i < 3; i++)
-    {
-        if (matrix[i] == NULL)
-        {
-            matrix[i] = new double[3];
-        }
-        for (int j = 0; j < 3; j++)
-        {
-            matrix[i][j] = (i == j) ? 1 : 0;
-        }
-    }
-}
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
     double angle = 0.1;
-    if (action == GLFW_PRESS || action == GLFW_REPEAT && transformationMatrix != NULL)
+    double translationAmount = 0.02;
+    if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
         switch (key)
         {
-            case GLFW_KEY_W: // Rotate about x-axis in an anti-clockwise direction.
-                transformationMatrix[1][1] = cos(angle);
-                transformationMatrix[1][2] = sin(angle);
-                transformationMatrix[2][1] = -sin(angle);
-                transformationMatrix[2][2] = cos(angle);
+            case GLFW_KEY_W: // Rotate about x-axis in a clockwise direction.
+                plane->rotate(angle, 0);
                 break;
-            case GLFW_KEY_S: // Rotate about x-axis in a clockwise direction.
-                transformationMatrix[1][1] = cos(-angle);
-                transformationMatrix[1][2] = sin(-angle);
-                transformationMatrix[2][1] = -sin(-angle);
-                transformationMatrix[2][2] = cos(-angle);
+            case GLFW_KEY_S: // Rotate about x-axis in a counter-clockwise direction.
+                plane->rotate(-angle, 0);
                 break;
-            case GLFW_KEY_A: // Rotate about y-axis in an anti-clockwise direction.
-                transformationMatrix[0][0] = cos(angle);
-                transformationMatrix[0][2] = -sin(angle);
-                transformationMatrix[2][0] = sin(angle);
-                transformationMatrix[2][2] = cos(angle);
+            case GLFW_KEY_A: // Rotate about y-axis in a clockwise direction.
+                plane->rotate(angle, 1);
                 break;
-            case GLFW_KEY_D: // Rotate about y-axis in a clockwise direction.
-                transformationMatrix[0][0] = cos(-angle);
-                transformationMatrix[0][2] = -sin(-angle);
-                transformationMatrix[2][0] = sin(-angle);
-                transformationMatrix[2][2] = cos(-angle);
+            case GLFW_KEY_D: // Rotate about y-axis in a counter-clockwise direction.
+                plane->rotate(-angle, 1);
                 break;
-            case GLFW_KEY_E: // Rotate about z-axis in an anti-clockwise direction.
-                transformationMatrix[0][0] = cos(angle);
-                transformationMatrix[0][1] = sin(angle);
-                transformationMatrix[1][0] = -sin(angle);
-                transformationMatrix[1][1] = cos(angle);
+            case GLFW_KEY_E: // Rotate about z-axis in a clockwise direction.
+                plane->rotate(angle, 2);
                 break;
-            case GLFW_KEY_Q: // Rotate about z-axis in a clockwise direction.
-                transformationMatrix[0][0] = cos(-angle);
-                transformationMatrix[0][1] = sin(-angle);
-                transformationMatrix[1][0] = -sin(-angle);
-                transformationMatrix[1][1] = cos(-angle);
+            case GLFW_KEY_Q: // Rotate about z-axis in a counter-clockwise direction.
+                plane->rotate(-angle, 2);
+                break;
+            case GLFW_KEY_I: // Increase y-axis position.
+                plane->translate(vec3(0, translationAmount, 0));
+                break;
+            case GLFW_KEY_K: // Decrease y-axis position.
+                plane->translate(vec3(0, -translationAmount, 0));
+                break;
+            case GLFW_KEY_L: // Increase x-axis position.
+                plane->translate(vec3(translationAmount, 0, 0));
+                break;
+            case GLFW_KEY_J: // Decrease x-axis position.
+                plane->translate(vec3(-translationAmount, 0, 0));
+                break;
+            case GLFW_KEY_O: // Increase z-axis position.
+                plane->translate(vec3(0, 0, translationAmount));
+                break;
+            case GLFW_KEY_U: // Decrease z-axis position.
+                plane->translate(vec3(0, 0, -translationAmount));
+                break;
+            case GLFW_KEY_KP_ADD:
+                plane->accelerate(0.1);
+                break;
+            case GLFW_KEY_KP_SUBTRACT:
+                plane->accelerate(-0.1);
                 break;
             case GLFW_KEY_ENTER: // Toggle wireframe
                 wireframe = !wireframe;
             default:
                 return;
         }
-        
-        Matrix *m = new Matrix(3,3,transformationMatrix);
-        plane->applyMatrix(m);
-        resetMatrix(transformationMatrix);
     }
 }
 void drawShape(Shape* shape, GLuint vertexbuffer, GLuint colorbuffer, GLuint programID)
@@ -171,14 +155,11 @@ void drawShape(Shape* shape, GLuint vertexbuffer, GLuint colorbuffer, GLuint pro
         glDrawArrays(GL_TRIANGLES, 0, numVertices);
     }
 
-
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
 }
 int main()
 {
-    transformationMatrix = new double*[3];
-    resetMatrix(transformationMatrix);
     GLFWwindow *window;
     try
     {
@@ -213,6 +194,7 @@ int main()
         glUseProgram(programID);
         //
         drawShape(plane, vertexbuffer, colorbuffer, programID);
+        plane->fly();
         //
         glfwSwapBuffers(window);
         glfwPollEvents();
